@@ -25,7 +25,7 @@ The end
 
 def _leading_space(content):
     """
-    count the number of leading spaces
+    Return the number of leading spaces
     """
     n = 0
     for c in content:
@@ -51,6 +51,7 @@ class NL(Token): match = '\n'
 class Text(Token): match = None
 
 
+
 tmap = {}
 for _class in Token.__subclasses__():
     if _class.match:
@@ -69,6 +70,16 @@ class Page(Node):
 
 class Paragraph(Node):
     pass
+
+class FreeText(Node):
+    
+    def __init__(self, content):
+        self.content = content
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({''.join([c.value for c in self.content])})"
+
+
 class InlineDirective(Node):
 
     def __init__(self, name,  content):
@@ -255,16 +266,32 @@ def find_headers(lines):
             yield prev
 
 
+def combine(token_stream):
+    current = []
+    for t in token_stream:
+        if isinstance(t, (Text, WhiteSpace)):
+            current.append(t)
+        else:
+            if current:
+                yield FreeText(current)
+                current = []
+            yield t
+    if current:
+        yield FreeText(current)
 
 
 
 def parse(input):
     tokens =  list(tokenize(input))
-    return (RepeatParser(
+    res, content= (RepeatParser(
         OrParser(
-            [NamedDirectiveParser(), DefaultDirectiveParser(), NoneParser()]
+            [NamedDirectiveParser(),
+             DefaultDirectiveParser(),
+             NoneParser()]
         )
     ).parse(tokens))
+    c = combine(res), content
+    return list(c)
     #print(DefaultDirectiveParser().parse(tokens))
     return[]
     #print(tokens)
